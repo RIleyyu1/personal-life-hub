@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="生活助手" />
+    <title>个人生活助手</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main id="view" aria-live="polite"></main>
+    <nav class="tabbar" aria-label="主导航">
+      <a href="#/today" data-tab="today"><span class="ico" aria-hidden="true">◎</span>今天</a>
+      <a href="#/meal" data-tab="meal"><span class="ico" aria-hidden="true">＋</span>记一餐</a>
+      <a href="#/workout" data-tab="workout"><span class="ico" aria-hidden="true">▲</span>训练</a>
+      <a href="#/weight" data-tab="weight"><span class="ico" aria-hidden="true">≈</span>体重</a>
+      <a href="#/me" data-tab="me"><span class="ico" aria-hidden="true">●</span>我的</a>
+    </nav>
+    <div id="toast" role="status"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

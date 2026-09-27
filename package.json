@@ -1,0 +1,18 @@
+{
+  "name": "personal-life-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "个人定制生活助手：拍照记餐、训练记录、体重趋势与个性化营养目标",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning --watch-path=server server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest"
+  }
+}

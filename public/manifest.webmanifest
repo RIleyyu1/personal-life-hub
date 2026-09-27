@@ -1,0 +1,10 @@
+{
+  "name": "个人生活助手",
+  "short_name": "生活助手",
+  "start_url": "/#/today",
+  "display": "standalone",
+  "background_color": "#f6f7f5",
+  "theme_color": "#0f766e",
+  "lang": "zh-CN",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
