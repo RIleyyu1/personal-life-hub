@@ -24,6 +24,7 @@ function migrate(db) {
       goal TEXT NOT NULL DEFAULT 'maintain',
       goal_rate REAL,
       eat_back_ratio REAL NOT NULL DEFAULT 0.5,
+      weight_unit TEXT NOT NULL DEFAULT 'kg',
       updated_at TEXT
     );
 
@@ -135,6 +136,10 @@ function migrate(db) {
       weight_kg REAL
     );
   `);
+
+  // 已有数据库补新列（CREATE TABLE IF NOT EXISTS 不会给旧表加列）
+  const cols = db.prepare('PRAGMA table_info(profile)').all().map((c) => c.name);
+  if (!cols.includes('weight_unit')) db.exec("ALTER TABLE profile ADD COLUMN weight_unit TEXT NOT NULL DEFAULT 'kg'");
 }
 
 function seed(db) {

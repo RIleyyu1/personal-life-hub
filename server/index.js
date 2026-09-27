@@ -29,9 +29,11 @@ const MIME = {
 
 // [method, pattern, handler(params, query, body)]
 const routes = [
-  ['GET', '/api/status', () => api.status()],
+  ['GET', '/api/status', async () => ({ ...(await api.status()), phoneUrls: lanUrls() })],
   ['GET', '/api/profile', () => api.getProfile()],
   ['PUT', '/api/profile', (_, __, b) => api.updateProfile(b)],
+  ['PUT', '/api/settings', (_, __, b) => api.updateSettings(b)],
+  ['GET', '/api/overview', (_, q) => api.overview(q.get('days'))],
   ['GET', '/api/dashboard', (_, q) => api.dashboard(q.get('date'))],
   ['GET', '/api/weights', (_, q) => api.listWeights(Number(q.get('days')) || 90)],
   ['POST', '/api/weights', (_, __, b) => api.saveWeight(b)],
@@ -54,6 +56,15 @@ const routes = [
   const re = new RegExp('^' + pattern.replace(/:(\w+)/g, (_, k) => (keys.push(k), '([^/]+)')) + '$');
   return { method, re, keys, handler };
 });
+
+// 同一 Wi-Fi 下手机可访问的地址（只监听本机时为空）
+function lanUrls() {
+  if (HOST !== '0.0.0.0') return [];
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((a) => a && a.family === 'IPv4' && !a.internal)
+    .map((a) => `http://${a.address}:${PORT}`);
+}
 
 function send(res, status, body, type = 'application/json; charset=utf-8') {
   res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
@@ -114,14 +125,8 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`\n个人生活助手已启动：`);
-  console.log(`  电脑：   http://localhost:${PORT}`);
-  if (HOST === '0.0.0.0') {
-    for (const addrs of Object.values(os.networkInterfaces())) {
-      for (const a of addrs || []) {
-        if (a.family === 'IPv4' && !a.internal) console.log(`  手机：   http://${a.address}:${PORT}  （需与电脑在同一 Wi-Fi）`);
-      }
-    }
-  }
+  console.log(`  电脑（查看数据）：http://localhost:${PORT}`);
+  for (const url of lanUrls()) console.log(`  手机（每日记录）：${url}  （需与电脑在同一 Wi-Fi）`);
   api.status().then(({ ai }) => {
     console.log(ai.enabled ? `  识别模型：${ai.model}` : '  识别模型：未配置 ANTHROPIC_API_KEY，拍照识别使用演示数据');
     console.log(`  数据目录：${dataDir}\n`);
