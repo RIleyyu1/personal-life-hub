@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f766e" />
+    <meta name="theme-color" content="#faf8f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1b19" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="生活助手" />
@@ -11,6 +12,9 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Noto+Serif+SC:wght@500;600&display=swap" />
     <link rel="stylesheet" href="/styles.css" />
     <script>
       // 手机（触屏）负责记录，电脑（鼠标）只看数据。开发时可用 ?mode=phone 或 ?mode=desktop 强制切换
@@ -22,15 +26,33 @@
     </script>
   </head>
   <body>
-    <main id="view" aria-live="polite"></main>
+    <main id="view"></main>
     <nav class="tabbar" aria-label="主导航">
-      <a href="#/today" data-tab="today"><span class="ico" aria-hidden="true">◎</span>今天</a>
-      <a href="#/meal" data-tab="meal"><span class="ico" aria-hidden="true">＋</span>记一餐</a>
-      <a href="#/workout" data-tab="workout"><span class="ico" aria-hidden="true">▲</span>训练</a>
-      <a href="#/weight" data-tab="weight"><span class="ico" aria-hidden="true">≈</span>体重</a>
-      <a href="#/me" data-tab="me"><span class="ico" aria-hidden="true">●</span>我的</a>
+      <a href="#/today" data-tab="today">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" /></svg>
+        <span>今天</span>
+      </a>
+      <a href="#/workout" data-tab="workout">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 7.5v9M3.5 9.5v5M17.5 7.5v9M20.5 9.5v5M6.5 12h11" /></svg>
+        <span>训练</span>
+      </a>
+      <button class="fab" type="button" aria-label="记一笔" data-open-menu>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      </button>
+      <a href="#/weight" data-tab="weight">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="4" /><path d="M8.6 10.2a4.2 4.2 0 0 1 6.8 0L12 12.4z" /></svg>
+        <span>体重</span>
+      </a>
+      <a href="#/me" data-tab="me">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></svg>
+        <span>我的</span>
+      </a>
     </nav>
-    <div id="toast" role="status"></div>
+    <button class="scrim" type="button" aria-label="关闭" data-scrim tabindex="-1"></button>
+    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-hidden="true"></section>
+    <div id="toast" role="status"><span data-toast-text></span><button type="button" data-toast-action hidden></button></div>
+    <input type="file" accept="image/*" capture="environment" id="camera-input" hidden />
+    <input type="file" accept="image/*" id="album-input" hidden />
     <script type="module" src="/app.js"></script>
   </body>
 </html>

@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/index.js",
     "dev": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning --watch-path=server server/index.js",
-    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\""
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\"",
+    "check-ai": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/check-ai.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest"
