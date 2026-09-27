@@ -27,6 +27,8 @@ export class HttpError extends Error {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
+const MUSCLES = ['胸', '背', '腿', '肩', '手臂', '核心'];
+const WEIGHT_UNITS = ['kg', 'lb'];
 
 export function localToday() {
   return new Date().toLocaleDateString('sv');
@@ -79,6 +81,21 @@ export function createApi({ db, dataDir }) {
       }
     });
     return getProfile();
+  }
+
+  function updateSettings(body) {
+    if (!WEIGHT_UNITS.includes(body.weight_unit)) throw new HttpError(400, '重量单位只能是 kg 或 lb');
+    getProfile();
+    db.prepare('UPDATE profile SET weight_unit = ? WHERE id = 1').run(body.weight_unit);
+    return { weight_unit: body.weight_unit };
+  }
+
+  // 某天生效的目标：取当天及之前最近一次切换；比最早记录还早的日子沿用最早的目标
+  function goalOn(date, profile) {
+    const row =
+      db.prepare('SELECT goal, goal_rate FROM goal_history WHERE start_date <= ? ORDER BY start_date DESC, id DESC LIMIT 1').get(date) ??
+      db.prepare('SELECT goal, goal_rate FROM goal_history ORDER BY start_date, id LIMIT 1').get();
+    return row ? { goal: row.goal, goal_rate: row.goal_rate } : { goal: profile.goal, goal_rate: profile.goal_rate };
   }
 
   // ---------- 体重 ----------
@@ -358,10 +375,12 @@ export function createApi({ db, dataDir }) {
     const weights = weightsUntil(date, 28);
     const adaptive = adaptiveTdee(weights, intakeByDate(addDays(date, -27), addDays(date, -1)));
     const blended = blendTdee(formula, adaptive);
-    const targets = dailyTargets({ profile, weightKg, tdee: blended.tdee, bmrValue: bmr });
+    const goal = goalOn(date, profile);
+    const targets = dailyTargets({ profile: { ...profile, ...goal }, weightKg, tdee: blended.tdee, bmrValue: bmr });
     return {
       ready: true,
       profile,
+      goal: goal.goal,
       weightKg,
       bmr: Math.round(bmr),
       formulaTdee: Math.round(formula),
@@ -418,10 +437,113 @@ export function createApi({ db, dataDir }) {
     return { ...base, budget, remaining: budget - Math.round(intake.kcal), tips };
   }
 
+  // 电脑端总览：区间内每天的摄入、当日预算、训练、体重，以及汇总
+  function overview(daysParam) {
+    const n = Math.min(365, Math.max(1, Math.round(Number(daysParam)) || 30));
+    const to = localToday();
+    const from = addDays(to, -(n - 1));
+    const profile = getProfile();
+
+    const intake = Object.fromEntries(
+      db
+        .prepare(
+          `SELECT m.date, COUNT(DISTINCT m.id) AS meals, SUM(i.kcal) AS kcal, SUM(i.protein) AS protein, SUM(i.carbs) AS carbs, SUM(i.fat) AS fat, SUM(i.fiber) AS fiber
+           FROM meal m JOIN meal_item i ON i.meal_id = m.id WHERE m.date BETWEEN ? AND ? GROUP BY m.date`,
+        )
+        .all(from, to)
+        .map((r) => [r.date, r]),
+    );
+    const training = Object.fromEntries(
+      db.prepare('SELECT date, COUNT(*) AS n, SUM(kcal) AS kcal FROM workout WHERE date BETWEEN ? AND ? GROUP BY date').all(from, to).map((r) => [r.date, r]),
+    );
+    // 多取前 6 天，让区间第一天的 7 天平均也是完整的
+    const weights = Object.fromEntries(movingAverage(weightsUntil(to, n + 6)).map((w) => [w.date, w]));
+
+    const days = [];
+    for (let d = from; d <= to; d = addDays(d, 1)) {
+      const model = energyModel(d);
+      const it = intake[d];
+      const workoutKcal = round(training[d]?.kcal || 0);
+      days.push({
+        date: d,
+        meals: it?.meals || 0,
+        intake: {
+          kcal: round(it?.kcal || 0),
+          protein: round(it?.protein || 0, 1),
+          carbs: round(it?.carbs || 0, 1),
+          fat: round(it?.fat || 0, 1),
+          fiber: round(it?.fiber || 0, 1),
+        },
+        target: model.ready ? { kcal: model.targets.kcal, protein: model.targets.protein } : null,
+        budget: model.ready ? Math.round(model.targets.kcal + workoutKcal * profile.eat_back_ratio) : null,
+        workouts: training[d]?.n || 0,
+        workoutKcal,
+        weight: weights[d]?.kg ?? null,
+        weightAvg: weights[d]?.avg ?? null,
+      });
+    }
+
+    const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+    const logged = days.filter((d) => d.meals > 0);
+    const judged = logged.filter((d) => d.budget);
+    const weighed = days.filter((d) => d.weightAvg != null);
+    const weightStart = weighed[0]?.weightAvg ?? null;
+    const weightEnd = weighed.at(-1)?.weightAvg ?? null;
+
+    const setsBy = Object.fromEntries(
+      db
+        .prepare(
+          `SELECT x.muscle, COUNT(s.id) AS sets FROM workout w JOIN workout_entry e ON e.workout_id = w.id
+           JOIN exercise x ON x.id = e.exercise_id JOIN workout_set s ON s.entry_id = e.id
+           WHERE w.date BETWEEN ? AND ? AND x.kind = 'strength' GROUP BY x.muscle`,
+        )
+        .all(from, to)
+        .map((r) => [r.muscle, r.sets]),
+    );
+    const cardioMinutes = db
+      .prepare(
+        `SELECT COALESCE(SUM(e.duration_min), 0) AS minutes FROM workout w JOIN workout_entry e ON e.workout_id = w.id
+         JOIN exercise x ON x.id = e.exercise_id WHERE w.date BETWEEN ? AND ? AND x.kind = 'cardio'`,
+      )
+      .get(from, to).minutes;
+
+    return {
+      from,
+      to,
+      days,
+      summary: {
+        days: n,
+        loggedDays: logged.length,
+        judgedDays: judged.length,
+        avgIntake: logged.length ? round(mean(logged.map((d) => d.intake.kcal))) : null,
+        avgBudget: judged.length ? round(mean(judged.map((d) => d.budget))) : null,
+        onTargetDays: judged.filter((d) => Math.abs(d.intake.kcal - d.budget) <= d.budget * 0.1).length,
+        avgProtein: logged.length ? round(mean(logged.map((d) => d.intake.protein))) : null,
+        avgProteinTarget: judged.length ? round(mean(judged.map((d) => d.target.protein))) : null,
+        proteinOkDays: judged.filter((d) => d.intake.protein >= d.target.protein * 0.9).length,
+        weightStart,
+        weightEnd,
+        weightChange: weighed.length >= 2 ? round(weightEnd - weightStart, 2) : null,
+        workouts: days.reduce((s, d) => s + d.workouts, 0),
+        workoutKcal: round(days.reduce((s, d) => s + d.workoutKcal, 0)),
+        cardioMinutes: round(cardioMinutes),
+      },
+      muscles: [...MUSCLES, ...Object.keys(setsBy).filter((m) => !MUSCLES.includes(m))].map((m) => ({ muscle: m, sets: setsBy[m] || 0 })),
+      records: personalRecords(),
+      energy: energyModel(to),
+      goals: GOALS,
+      activityLevels: ACTIVITY_LEVELS,
+      goalHistory: db.prepare('SELECT * FROM goal_history ORDER BY start_date DESC, id DESC').all(),
+      memory: foodMemory(20),
+    };
+  }
+
   return {
-    status: async () => ({ ai: await aiStatus(), today: localToday() }),
+    status: async () => ({ ai: await aiStatus(), today: localToday(), weightUnit: getProfile().weight_unit }),
     getProfile: () => ({ ...getProfile(), energy: energyModel(localToday()), goals: GOALS, activityLevels: ACTIVITY_LEVELS, goalHistory: db.prepare('SELECT * FROM goal_history ORDER BY start_date DESC, id DESC').all() }),
     updateProfile,
+    updateSettings,
+    overview,
     listWeights,
     saveWeight,
     deleteWeight: (date) => (db.prepare('DELETE FROM weight_log WHERE date = ?').run(requireDate(date)), { ok: true }),

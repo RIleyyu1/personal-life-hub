@@ -12,6 +12,14 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <link rel="stylesheet" href="/styles.css" />
+    <script>
+      // 手机（触屏）负责记录，电脑（鼠标）只看数据。开发时可用 ?mode=phone 或 ?mode=desktop 强制切换
+      (function () {
+        var q = new URLSearchParams(location.search).get('mode');
+        var mode = q === 'phone' || q === 'desktop' ? q : matchMedia('(hover: hover) and (pointer: fine)').matches ? 'desktop' : 'phone';
+        document.documentElement.dataset.mode = mode;
+      })();
+    </script>
   </head>
   <body>
     <main id="view" aria-live="polite"></main>
