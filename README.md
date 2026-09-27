@@ -26,6 +26,17 @@ npm start              # 或 npm run dev（改后端代码自动重启）
 
 数据（SQLite 数据库 + 照片）保存在 `data/`，已被 git 忽略，只在你自己的电脑上。
 
+## 接入拍照识别（Claude API）
+
+不填 key 时拍照识别返回演示数据，其余功能照常可用。接入真实识别：
+
+1. 在 Claude 开发者平台 https://platform.claude.com 登录，绑定付费方式后创建一个 API key。
+2. 把 key 填进项目根目录的 `.env`：`ANTHROPIC_API_KEY=sk-ant-...`（`.env` 已被 git 忽略，不会上传）。
+3. 运行 `npm run check-ai`：用一张测试图走一遍和记餐完全相同的调用，看到"识别接口正常"就说明配置好了；失败时会给出 HTTP 状态（401 多半是 key 不对）。
+4. 重启 `npm start`，然后拿真实的饭菜拍几张试试，把明显估错的地方告诉 Claude，用来调整提示词。
+
+费用（估算）：默认模型 `claude-opus-5`，每张照片大约 3–7 美分，一天三餐一个月约 3–6 美元；识别速度一般几秒到十几秒。想更省钱可以在 `.env` 里设 `CLAUDE_MODEL=claude-sonnet-5`，价格约为 Opus 的四成。
+
 ## 测试
 
 ```bash
