@@ -89,7 +89,7 @@ function page(o) {
         <div data-chart="weight"></div>
       </figure>
       <figure class="card chart-card">
-        <figcaption><h2>每日蛋白质</h2>${legend([['bar', 'var(--viz-protein)', '摄入'], ['line', 'var(--viz-ref)', '目标']])}</figcaption>
+        <figcaption><h2>每日蛋白质</h2>${legend([['bar', 'var(--viz-1)', '摄入'], ['line', 'var(--viz-ref)', '目标']])}</figcaption>
         <div data-chart="protein"></div>
       </figure>
       <figure class="card chart-card">
@@ -180,13 +180,13 @@ function mountCharts(o) {
     values: days.map((d) => d.intake.protein),
     refs: days.map((d) => d.target?.protein ?? null),
     labels,
-    color: 'var(--viz-protein)',
+    color: 'var(--viz-1)',
     tip: (i) => {
       const d = days[i];
       return {
         title: fmtDate(d.date),
         rows: [
-          { key: 'bar', color: 'var(--viz-protein)', value: d.meals ? `${r0(d.intake.protein)} g` : '未记录', label: '摄入' },
+          { key: 'bar', color: 'var(--viz-1)', value: d.meals ? `${r0(d.intake.protein)} g` : '未记录', label: '摄入' },
           d.target && { key: 'line', color: 'var(--viz-ref)', value: `${d.target.protein} g`, label: '目标' },
         ].filter(Boolean),
       };
